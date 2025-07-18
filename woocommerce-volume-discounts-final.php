@@ -663,6 +663,9 @@ class WC_Volume_Discounts_Final {
                     attributes[name] = value;
                 });
                 
+                console.log('Selected attributes:', attributes);
+                console.log('Available variations:', variations);
+                
                 if (!allSelected) {
                     container.find('.single_variation_wrap').hide();
                     container.find('input[name="variation_id"]').val(0);
@@ -673,9 +676,12 @@ class WC_Volume_Discounts_Final {
                 var matchedVariation = null;
                 $.each(variations, function(index, variation) {
                     var match = true;
+                    console.log('Checking variation:', variation);
                     
                     $.each(attributes, function(attr_name, attr_value) {
-                        if (variation.attributes[attr_name] && variation.attributes[attr_name] !== attr_value) {
+                        var variation_attr_name = 'attribute_' + attr_name;
+                        console.log('Comparing:', variation_attr_name, '=', variation.attributes[variation_attr_name], 'with', attr_value);
+                        if (variation.attributes[variation_attr_name] !== undefined && variation.attributes[variation_attr_name] !== attr_value) {
                             match = false;
                             return false;
                         }
@@ -683,6 +689,7 @@ class WC_Volume_Discounts_Final {
                     
                     if (match) {
                         matchedVariation = variation;
+                        console.log('Found matching variation:', matchedVariation);
                         return false;
                     }
                 });
@@ -702,6 +709,10 @@ class WC_Volume_Discounts_Final {
                         }
                     }
                     
+                    console.log('Price display for variation:', priceDisplay);
+                    console.log('Variation display_price:', matchedVariation.display_price);
+                    console.log('Variation price_html:', matchedVariation.price_html);
+                    
                     if (priceDisplay) {
                         container.find('.single_variation').html('<div class="woocommerce-variation-price"><span class="price">' + priceDisplay + '</span></div>');
                     }
@@ -710,7 +721,12 @@ class WC_Volume_Discounts_Final {
                     
                     // Обновляем информацию о скидке
                     setTimeout(function() {
-                        container.find('.qty').trigger('change');
+                        if (typeof updateDiscountInfo === 'function') {
+                            updateDiscountInfo();
+                        } else {
+                            // Альтернативный способ обновления через событие изменения количества
+                            container.find('.qty').trigger('change');
+                        }
                     }, 100);
                 } else {
                     container.find('.single_variation_wrap').hide();
