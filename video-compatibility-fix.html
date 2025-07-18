@@ -1,0 +1,182 @@
+<!-- Исправленная версия видео-элемента с поддержкой Firefox -->
+<div class="e-con-inner">
+    <div class="elementor-background-video-container">
+        <canvas width="1920" height="1080" style="width: 100%; height: 100%; object-fit: cover;"></canvas>
+        
+        <!-- Исправленный видео-элемент с множественными источниками -->
+        <video class="elementor-background-video-hosted" 
+               autoplay="" 
+               muted="" 
+               playsinline="" 
+               loop="" 
+               preload="metadata"
+               style="display: none; width: 1920px; height: 1080px;">
+            
+            <!-- Основной источник (оригинальный) -->
+            <source src="/wp-content/uploads/2025/06/img_6412.mp4" type="video/mp4">
+            
+            <!-- Альтернативные форматы для лучшей совместимости -->
+            <source src="/wp-content/uploads/2025/06/img_6412.webm" type="video/webm">
+            <source src="/wp-content/uploads/2025/06/img_6412.ogv" type="video/ogg">
+            
+            <!-- Fallback для старых браузеров -->
+            <p>Ваш браузер не поддерживает воспроизведение видео.</p>
+        </video>
+    </div>
+    
+    <!-- Остальной контент остается без изменений -->
+    <div class="elementor-element elementor-element-64181f3 e-con-full e-flex e-con e-child" data-id="64181f3" data-element_type="container">
+    </div>
+    <!-- ... остальной HTML код ... -->
+</div>
+
+<script>
+// JavaScript для диагностики и исправления проблем с видео
+document.addEventListener('DOMContentLoaded', function() {
+    const video = document.querySelector('.elementor-background-video-hosted');
+    const canvas = document.querySelector('.elementor-background-video-container canvas');
+    
+    if (!video) return;
+    
+    // Функция для логирования ошибок
+    function logVideoError(error, context) {
+        console.error(`Video Error (${context}):`, error);
+        
+        // Отправляем информацию о браузере для диагностики
+        const browserInfo = {
+            userAgent: navigator.userAgent,
+            videoFormats: getVideoFormats(),
+            error: error.message || error
+        };
+        console.log('Browser Info:', browserInfo);
+    }
+    
+    // Проверка поддерживаемых форматов видео
+    function getVideoFormats() {
+        const formats = {};
+        const testVideo = document.createElement('video');
+        
+        formats.mp4 = testVideo.canPlayType('video/mp4');
+        formats.webm = testVideo.canPlayType('video/webm');
+        formats.ogg = testVideo.canPlayType('video/ogg');
+        
+        return formats;
+    }
+    
+    // Обработчики событий для диагностики
+    video.addEventListener('error', function(e) {
+        logVideoError(e.target.error, 'Video Element Error');
+        showFallbackBackground();
+    });
+    
+    video.addEventListener('loadstart', function() {
+        console.log('Video loading started');
+    });
+    
+    video.addEventListener('loadedmetadata', function() {
+        console.log('Video metadata loaded');
+        video.style.display = 'block';
+        if (canvas) canvas.style.display = 'none';
+    });
+    
+    video.addEventListener('canplay', function() {
+        console.log('Video can start playing');
+    });
+    
+    video.addEventListener('stalled', function() {
+        console.warn('Video download stalled');
+        setTimeout(retryVideoLoad, 2000);
+    });
+    
+    // Функция для повторной попытки загрузки
+    function retryVideoLoad() {
+        console.log('Retrying video load...');
+        video.load();
+    }
+    
+    // Функция показа fallback фона
+    function showFallbackBackground() {
+        if (canvas) {
+            canvas.style.display = 'block';
+            canvas.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+        }
+        
+        // Альтернативно можно установить статичное изображение
+        const container = document.querySelector('.elementor-background-video-container');
+        if (container) {
+            container.style.backgroundImage = 'url(/wp-content/uploads/2025/06/img_6412_poster.jpg)';
+            container.style.backgroundSize = 'cover';
+            container.style.backgroundPosition = 'center';
+        }
+    }
+    
+    // Принудительная проверка через 3 секунды
+    setTimeout(function() {
+        if (video.readyState === 0) {
+            console.warn('Video failed to load after 3 seconds, showing fallback');
+            showFallbackBackground();
+        }
+    }, 3000);
+    
+    // Специальная обработка для Firefox
+    if (navigator.userAgent.includes('Firefox')) {
+        console.log('Firefox detected, applying specific fixes');
+        
+        // Устанавливаем более совместимые атрибуты для Firefox
+        video.setAttribute('preload', 'auto');
+        video.removeAttribute('autoplay');
+        
+        // Запускаем автовоспроизведение после загрузки метаданных
+        video.addEventListener('loadedmetadata', function() {
+            video.play().catch(function(error) {
+                console.warn('Autoplay failed in Firefox:', error);
+                // В Firefox часто нужно взаимодействие пользователя для автовоспроизведения
+            });
+        });
+    }
+});
+</script>
+
+<style>
+/* Дополнительные стили для улучшения отображения */
+.elementor-background-video-container {
+    position: relative;
+    overflow: hidden;
+}
+
+.elementor-background-video-container canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover;
+    z-index: 1;
+}
+
+.elementor-background-video-hosted {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover;
+    z-index: 2;
+}
+
+/* Fallback стили для случаев, когда видео не загружается */
+.elementor-background-video-container.video-error {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.elementor-background-video-container.video-error::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.3);
+    z-index: 3;
+}
+</style>
