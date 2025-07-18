@@ -1,7 +1,7 @@
 <?php
 /**
  * Система скидок по объему для WooCommerce
- * Исправленная версия для вариативных товаров
+ * Финальная версия с исправленным отображением цен вариаций
  */
 
 // Защита от прямого доступа
@@ -17,7 +17,7 @@ if (!class_exists('WooCommerce')) {
 /**
  * Основной класс системы скидок
  */
-class WC_Volume_Discounts_Fixed {
+class WC_Volume_Discounts_Final {
     
     public function __construct() {
         add_action('init', array($this, 'init'));
@@ -189,11 +189,6 @@ class WC_Volume_Discounts_Fixed {
      * Обновление фрагментов мини-корзины
      */
     public function update_mini_cart_fragments($fragments) {
-        // Обновляем счетчик товаров
-        ob_start();
-        wc_cart_totals_subtotal_html();
-        $fragments['.cart-subtotal .woocommerce-Price-amount'] = ob_get_clean();
-        
         // Обновляем общее количество
         $fragments['.cart-contents-count'] = WC()->cart->get_cart_contents_count();
         
@@ -275,8 +270,7 @@ class WC_Volume_Discounts_Fixed {
             // Получаем обновленные фрагменты
             $fragments = apply_filters('woocommerce_add_to_cart_fragments', array(
                 '.widget_shopping_cart_content' => $this->get_mini_cart_content(),
-                '.cart-contents-count' => WC()->cart->get_cart_contents_count(),
-                '.cart-subtotal .woocommerce-Price-amount' => wc_price(WC()->cart->get_subtotal())
+                '.cart-contents-count' => WC()->cart->get_cart_contents_count()
             ));
             
             wp_send_json_success(array(
@@ -650,81 +644,73 @@ class WC_Volume_Discounts_Fixed {
         
         <input type="hidden" name="variation_id" value="0">
         
-                 <script>
-         jQuery(document).ready(function($) {
-             var variations = <?php echo wp_json_encode($available_variations); ?>;
-             var container = $('#<?php echo esc_js($unique_id); ?>');
-             
-             // Отладка: выводим доступные вариации в консоль
-             console.log('Available variations:', variations);
-             
-             function findVariation() {
+        <script>
+        jQuery(document).ready(function($) {
+            var variations = <?php echo wp_json_encode($available_variations); ?>;
+            var container = $('#<?php echo esc_js($unique_id); ?>');
+            
+            function findVariation() {
                 var attributes = {};
                 var allSelected = true;
                 
-                                                  container.find('select[name^="attribute_"]').each(function() {
-                     var name = $(this).attr('name').replace('attribute_', '');
-                     var value = $(this).val();
-                     
-                     if (value === '') {
-                         allSelected = false;
-                     }
-                     attributes[name] = value;
-                 });
-                 
-                 console.log('Selected attributes:', attributes);
-                 
-                 if (!allSelected) {
-                     container.find('.single_variation_wrap').hide();
-                     container.find('input[name="variation_id"]').val(0);
-                     return;
-                 }
-                 
-                 var matchedVariation = null;
-                 $.each(variations, function(index, variation) {
-                     var match = true;
-                     console.log('Checking variation:', variation);
-                     
-                     $.each(attributes, function(attr_name, attr_value) {
-                         if (variation.attributes[attr_name] && variation.attributes[attr_name] !== attr_value) {
-                             match = false;
-                             return false;
-                         }
-                     });
-                     
-                     if (match) {
-                         matchedVariation = variation;
-                         console.log('Found matching variation:', matchedVariation);
-                         return false;
-                     }
-                 });
+                container.find('select[name^="attribute_"]').each(function() {
+                    var name = $(this).attr('name').replace('attribute_', '');
+                    var value = $(this).val();
+                    
+                    if (value === '') {
+                        allSelected = false;
+                    }
+                    attributes[name] = value;
+                });
+                
+                if (!allSelected) {
+                    container.find('.single_variation_wrap').hide();
+                    container.find('input[name="variation_id"]').val(0);
+                    container.find('.volume-discount-info-container').html('');
+                    return;
+                }
+                
+                var matchedVariation = null;
+                $.each(variations, function(index, variation) {
+                    var match = true;
+                    
+                    $.each(attributes, function(attr_name, attr_value) {
+                        if (variation.attributes[attr_name] && variation.attributes[attr_name] !== attr_value) {
+                            match = false;
+                            return false;
+                        }
+                    });
+                    
+                    if (match) {
+                        matchedVariation = variation;
+                        return false;
+                    }
+                });
                 
                 if (matchedVariation) {
                     container.find('input[name="variation_id"]').val(matchedVariation.variation_id);
                     
-                                         // Правильно форматируем цену вариации
-                     var priceHtml = '';
-                     if (matchedVariation.price_html) {
-                         priceHtml = matchedVariation.price_html;
-                     } else if (matchedVariation.display_price) {
-                         priceHtml = '<span class="woocommerce-Price-amount amount"><bdi>' + Math.round(matchedVariation.display_price) + ' руб.</bdi></span>';
-                     } else if (matchedVariation.display_regular_price) {
-                         priceHtml = '<span class="woocommerce-Price-amount amount"><bdi>' + Math.round(matchedVariation.display_regular_price) + ' руб.</bdi></span>';
-                     }
-                     
-                     console.log('Price HTML:', priceHtml);
-                     
-                     if (priceHtml) {
-                         container.find('.single_variation').html('<div class="woocommerce-variation-price"><span class="price">' + priceHtml + '</span></div>');
-                     } else {
-                         container.find('.single_variation').html('<div class="woocommerce-variation-price">Цена не найдена</div>');
-                     }
+                    // Форматируем цену правильно
+                    var priceDisplay = '';
+                    
+                    if (matchedVariation.price_html) {
+                        priceDisplay = matchedVariation.price_html;
+                    } else {
+                        var price = matchedVariation.display_price || matchedVariation.display_regular_price;
+                        if (price) {
+                            priceDisplay = '<span class="woocommerce-Price-amount amount"><bdi>' + Math.round(price) + ' руб.</bdi></span>';
+                        }
+                    }
+                    
+                    if (priceDisplay) {
+                        container.find('.single_variation').html('<div class="woocommerce-variation-price"><span class="price">' + priceDisplay + '</span></div>');
+                    }
                     
                     container.find('.single_variation_wrap').show();
                     
-                    // Обновляем информацию о скидке для новой вариации
+                    // Обновляем информацию о скидке
                     setTimeout(function() {
-                        updateDiscountInfo();
+                        container.find('.qty').trigger('change');
                     }, 100);
                 } else {
                     container.find('.single_variation_wrap').hide();
@@ -758,7 +744,7 @@ class WC_Volume_Discounts_Fixed {
         echo '<div class="options_group">';
         echo '<h3>Настройки скидок по объему</h3>';
         if ($product->is_type('variable')) {
-            echo '<p>Эти настройки применяются ко всем вариациям данного товара</p>';
+            echo '<p><strong>Эти настройки применяются ко всем вариациям данного товара</strong></p>';
         }
         echo '<p>Укажите диапазоны количества товаров и соответствующие проценты скидок (до 7 правил)</p>';
         
@@ -841,4 +827,4 @@ class WC_Volume_Discounts_Fixed {
 }
 
 // Инициализация
-new WC_Volume_Discounts_Fixed();
+new WC_Volume_Discounts_Final();
