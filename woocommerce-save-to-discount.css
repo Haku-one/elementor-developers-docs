@@ -1,0 +1,34 @@
+/* Замена "Сэкономьте" на "Скидка" в WooCommerce блоках */
+
+/* Скрываем оригинальный текст */
+.wc-block-components-sale-badge:lang(ru),
+.wc-block-components-product-badge:lang(ru) {
+    font-size: 0 !important;
+}
+
+/* Показываем новый текст */
+.wc-block-components-sale-badge:lang(ru):before,
+.wc-block-components-product-badge:lang(ru):before {
+    content: "Скидка ";
+    font-size: 14px;
+    font-weight: inherit;
+}
+
+/* Показываем сумму скидки обратно */
+.wc-block-components-sale-badge .wc-block-formatted-money-amount,
+.wc-block-components-product-badge .wc-block-formatted-money-amount {
+    font-size: 14px !important;
+}
+
+/* Альтернативный способ через data-attributes если они есть */
+.wc-block-components-sale-badge[data-text*="Сэкономьте"],
+.wc-block-components-product-badge[data-text*="Сэкономьте"] {
+    font-size: 0 !important;
+}
+
+.wc-block-components-sale-badge[data-text*="Сэкономьте"]:before,
+.wc-block-components-product-badge[data-text*="Сэкономьте"]:before {
+    content: "Скидка ";
+    font-size: 14px;
+    font-weight: inherit;
+}
